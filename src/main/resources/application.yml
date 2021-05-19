@@ -1,0 +1,31 @@
+server:
+  port: 9001
+spring:
+  application:
+    name: icor-system-service
+  profiles:
+    active: dev
+
+version: 19990909
+
+
+#
+### 配置sql打印日志
+#logging:
+#  level:
+#    com.shiliang.springcloud.mapper: debug
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+#    ##mybatis日志
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  #xml地址
+  mapper-locations: classpath:mapper/*Mapper.xml
+  #实体扫描
+  type-aliases-package: com.shiliang.icor.pojo.entity
+
+
+
+
+
+

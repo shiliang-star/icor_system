@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shiliang.icor.mapper.ManuscriptMapper">
+
+<!--    <resultMap id="manuscriptMap" type="com.shiliang.icor.pojo.vo.ManuscriptVO">-->
+<!--        <id column="id" property="id" -->
+<!--    </resultMap>-->
+
+    <select id="findByIdIn" resultType="com.shiliang.icor.pojo.entity.ManuscriptEntity">
+        select * from t_manuscript where id in
+        <foreach collection="ids" separator="," item="id" open="(" close=")">
+            #{id}
+        </foreach>
+        and dr=0
+    </select>
+
+    <select id="page" resultType="com.shiliang.icor.pojo.vo.ManuscriptVO">
+        SELECT
+                m.id,
+                m.code,
+                m.name,
+                m.manuscript_class,
+                m.description,
+                m.contributor,
+                GROUP_CONCAT( u.nick_name SEPARATOR ' ' ) AS reviewer,
+                m.view_count,
+                c.NAME as conference,
+                m.status,
+                m.creation_time
+        FROM
+                t_manuscript m
+                        LEFT JOIN t_conference c ON m.conference_id = c.id
+                        LEFT JOIN t_user_manuscript um ON um.manuscript_id = m.id
+                        LEFT JOIN acl_user u ON u.id = um.user_id
+        <choose>
+            <when test="ew.customSqlSegment != '' and ew.customSqlSegment != null">
+                ${ew.customSqlSegment} and m.is_deleted=0
+            </when>
+            <otherwise>
+                where m.is_deleted=0
+            </otherwise>
+        </choose>
+        GROUP BY
+                m.id
+        ORDER BY m.creation_time DESC
+
+    </select>
+</mapper>

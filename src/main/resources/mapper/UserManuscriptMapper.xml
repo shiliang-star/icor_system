@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shiliang.icor.mapper.UserManuscriptMapper">
+
+
+    <select id="page" resultType="com.shiliang.icor.pojo.vo.UserManuscriptVO">
+        SELECT
+                um.id,
+                um.approve_time,
+                um.approve_attitude,
+                um.exam_opinion,
+                um.title_idea,
+                um.filed_idea,
+                um.science_lev,
+                um.txt_value,
+                um.title_charm,
+                um.eg_leval,
+                um.intro_real,
+                um.is_approved,
+                u.nick_name as username,
+                m.NAME as manuscriptName,
+                m.code as manuscriptCode
+        FROM
+                t_user_manuscript um
+                        INNER JOIN acl_user u ON um.user_id = u.id
+                        INNER JOIN t_manuscript m ON um.manuscript_id = m.id
+        <choose>
+            <when test="ew.customSqlSegment != '' and ew.customSqlSegment != null">
+                ${ew.customSqlSegment} and um.is_deleted=0
+            </when>
+            <otherwise>
+                where um.is_deleted=0
+            </otherwise>
+        </choose>
+        order by um.allocate_time desc
+    </select>
+
+    <select id="searchByManuscriptId" resultType="com.shiliang.icor.pojo.vo.UserManuscriptVO">
+        SELECT
+        um.id,
+        um.approve_time,
+        um.approve_attitude,
+        um.exam_opinion,
+        um.title_idea,
+        um.filed_idea,
+        um.science_lev,
+        um.txt_value,
+        um.title_charm,
+        um.eg_leval,
+        um.intro_real,
+        um.is_approved,
+        u.nick_name as username,
+        m.NAME as manuscriptName,
+        m.code as manuscriptCode
+        FROM
+        t_user_manuscript um
+        INNER JOIN acl_user u ON um.user_id = u.id
+        INNER JOIN t_manuscript m ON um.manuscript_id = m.id
+                where um.is_deleted=0 and um.manuscript_id=#{manuscriptId,jdbcType=VARCHAR}
+        order by um.allocate_time desc
+    </select>
+</mapper>

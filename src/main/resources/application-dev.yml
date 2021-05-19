@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource            # 当前数据源操作类型
+    driver-class-name: com.mysql.cj.jdbc.Driver          # mysql驱动包
+    url: jdbc:mysql://localhost:3306/icor_system?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+#设置单个文件最大请求10MB，最多一次请求10个文件
+  servlet:
+   multipart:
+     max-file-size: 10MB
+     max-request-size: 100MB
+  redis:
+   host: 39.96.50.107
+   port: 6379
+   database: 0
+   timeout: 1800000
+   lettuce:
+     pool:
+       max-active: 20
+       max-wait: -1
+       #最大阻塞等待时间（负数表示没限制）
+       max-idle: 5
+       min-idle: 0
+       #最小空闲
+
+#阿里云 OSS
+#不同的服务器，地址不同
+aliyun:
+  oss:
+    file:
+       endpoint: oss-cn-beijing.aliyuncs.com
+       keyid: LTAI4GFJn45mPDBrGuWUyhL7
+       keysecret: o4kX7OWqodDJI9jYWSp3zubt4HkoJB
+#bucket可以在控制台创建，也可以使用java代码创建
+       bucketname: shiliang-edu
+
+

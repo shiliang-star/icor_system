@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.shiliang.icor.mapper.UserMapper">
+
+    <select id="searchAllUserWithReview" resultType="com.shiliang.icor.pojo.vo.UserVO">
+        select u.id,u.username,u.nick_name
+        from  acl_user_role  ur
+        inner join acl_user u on u.id=ur.user_id
+        inner join acl_role r on r.id=ur.role_id
+        where r.role_code="REVIEW" and ur.is_deleted=0 and u.is_deleted=0 and r.is_deleted=0
+    </select>
+
+    <select id="searchUserAssignManuscript" resultType="com.shiliang.icor.pojo.vo.UserVO">
+        select u.id,u.username,u.nick_name
+        from t_user_manuscript um
+        left join acl_user u on um.user_id= u.id
+        where um.manuscript_id=#{manuscriptId,jdbcType=VARCHAR}
+    </select>
+</mapper>
