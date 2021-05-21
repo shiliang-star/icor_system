@@ -5,6 +5,7 @@ import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.OSSObject;
+import com.shiliang.icor.exception.ApiException;
 import org.joda.time.DateTime;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,7 +18,7 @@ import java.io.*;
  * @Description 阿里云OSS工具类
  * @createTime 2021年05月16日 08:44:00
  */
-public class OSSUtil {
+public class OSSUploadUtil {
     // Endpoint以杭州为例，其它Region请按实际情况填写。
     private final static String ENDPOINT = ConstantPropertiesUtils.END_POINT;
     // 云账号AccessKey有所有API访问权限，建议遵循阿里云安全最佳实践，创建并使用RAM子账号进行API访问或日常运维，请登录 https://ram.console.aliyun.com 创建。
@@ -25,7 +26,12 @@ public class OSSUtil {
     private final static String ACCESS_KEY_SECRET = ConstantPropertiesUtils.ACCESS_KEY_SECRET;
     private final static String BUCKET_NAME = ConstantPropertiesUtils.BUCKET_NAME;
 
-    public static String upload(MultipartFile file) {
+    /**
+     * 上传文件到OSS
+     * @param file
+     * @return 数组{文件URL，文件名}
+     */
+    public static String[] upload(MultipartFile file) {
         try {
             // 创建OSSClient实例。
             OSS ossClient = new OSSClientBuilder().build(ENDPOINT, ACCESS_KEY_ID, ACCESS_KEY_SECRET);
@@ -54,42 +60,33 @@ public class OSSUtil {
 
             //把文件路径返回
             String url = "https://" + BUCKET_NAME + "." + ENDPOINT + "/" + filename;
-            return url;
+            return new String[]{url, filename};
         } catch (IOException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    public static void download(String objectName) throws IOException {
-        BufferedReader reader = null;
-        OSS ossClient= null;
+
+    /**
+     * 删除OSS单个文件
+     * @param fileName
+     */
+    public static void deleteFile(String fileName) {
+        OSS ossClient = null;
         try {
             // 创建OSSClient实例。
             ossClient = new OSSClientBuilder().build(ENDPOINT, ACCESS_KEY_ID, ACCESS_KEY_SECRET);
-
-            // ossObject包含文件所在的存储空间名称、文件名称、文件元信息以及一个输入流。
-            OSSObject ossObject = ossClient.getObject(BUCKET_NAME, objectName);
-
-            // 读取文件内容。
-            System.out.println("Object content:");
-             reader = new BufferedReader(new InputStreamReader(ossObject.getObjectContent()));
-            while (true) {
-                String line = reader.readLine();
-                if (line == null) {
-                    break;
-                }
-
-                System.out.println("\n" + line);
-            }
-
-        } catch (OSSException | IOException | ClientException e) {
-            e.printStackTrace();
-        } finally {
-            // 数据读取完成后，获取的流必须关闭，否则会造成连接泄漏，导致请求无连接可用，程序无法正常工作。
-            reader.close();
+            // 删除文件。如需删除文件夹，请将ObjectName设置为对应的文件夹名称。如果文件夹非空，则需要将文件夹下的所有object删除后才能删除该文件夹。
+            ossClient.deleteObject(BUCKET_NAME, fileName);
+        } catch (Exception e){
+            throw new ApiException("阿里云OSS删除失败");
+        }finally {
             // 关闭OSSClient。
+            assert ossClient != null;
             ossClient.shutdown();
+
         }
+
     }
 }

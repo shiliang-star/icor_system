@@ -46,13 +46,15 @@ public class ManuscriptEntity extends BaseEntity implements Serializable {
     private String contributor;
 
     @ApiModelProperty(value = "浏览数量")
+    @TableField(fill = FieldFill.INSERT)
     private Long viewCount;
 
     @ApiModelProperty(value = "所属会议")
     private String conferenceId;
 
-    @ApiModelProperty(value = "审稿阶段")
-    private String examStage;
+    @ApiModelProperty(value = "审稿进度")
+    @TableField(fill = FieldFill.INSERT)
+    private Integer examProgress;
 
     @ApiModelProperty(value = "稿件状态")
     private Integer status;

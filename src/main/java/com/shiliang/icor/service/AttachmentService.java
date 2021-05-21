@@ -4,10 +4,13 @@ package com.shiliang.icor.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.shiliang.icor.pojo.CommonResult;
 import com.shiliang.icor.pojo.entity.AttachmentEntity;
+import com.shiliang.icor.pojo.vo.AttachmentBusinessObjectSearch;
 import com.shiliang.icor.pojo.vo.AttachmentSearchForm;
+import com.shiliang.icor.pojo.vo.AttachmentVO;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * <p>
@@ -24,8 +27,10 @@ public interface AttachmentService extends IService<AttachmentEntity> {
      * @param file
      * @return
      */
-    CommonResult upload(MultipartFile file);
+    String upload(String businessType,MultipartFile file);
 
     Page<AttachmentEntity> pageAttachmentCondition(Integer currentPage, Integer pageSize, AttachmentSearchForm attachmentSearchForm);
+
+    List<AttachmentVO> getAttachmentByBusinessObject(AttachmentBusinessObjectSearch attachmentBusinessObjectSearch);
 
 }

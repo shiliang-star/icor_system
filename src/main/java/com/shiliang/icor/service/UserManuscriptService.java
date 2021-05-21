@@ -8,6 +8,7 @@ import com.shiliang.icor.pojo.vo.ManuscriptVO;
 import com.shiliang.icor.pojo.vo.UserManuscriptVO;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 
 /**
@@ -23,4 +24,6 @@ public interface UserManuscriptService extends IService<UserManuscriptEntity> {
     Page<UserManuscriptVO> pageUserManuscriptCondition(Integer currentPage, Integer pageSize, ManuscriptSearchForm manuscriptSearchForm, HttpServletRequest request);
 
     List<UserManuscriptVO> getByManuscriptId(String manuscriptId);
+
+    void exportExcel(HttpServletResponse response);
 }

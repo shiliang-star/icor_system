@@ -15,6 +15,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -102,7 +103,19 @@ public class OperLogAspect {
             operationLogEntity.setOperMethod(methodName);
             //请求的参数
             Object[] args = joinPoint.getArgs();
-            String params = JSON.toJSONString(args);
+            Object[] newArgs= args;
+            //特殊处理
+            if ("分页条件查询稿件信息".equals(operationLogEntity.getOperDesc())) {
+                newArgs = new Object[args.length - 1];
+                for (int i = 0; i < args.length-1; i++) {
+                    newArgs[i] = args[i];
+                }
+            }
+            if (operationLogEntity.getOperDesc().contains("导出")) {
+                newArgs = new Object[]{"导出"};
+            }
+
+            String params = JSON.toJSONString(newArgs);
 //            Map<String, String> paramMap = convertMap(request.getParameterMap());
             //将参数所在的数组转换成json
 //            String params = JSON.toJSONString(paramMap);
@@ -110,18 +123,17 @@ public class OperLogAspect {
             operationLogEntity.setOperRequParam(params);
             //返回结果
             operationLogEntity.setOperRespParam(JSON.toJSONString(keys));
-            //请求用户ID//TODO
-//                operlog.setOperUserId(UserShiroUtil.getCurrentUserLoginName()); // 请求用户ID
-//             operlog.setOperUserName(UserShiroUtil.getCurrentUserName()); // 请求用户名称
-            operationLogEntity.setOperUserName("system");//TODO
+           //获取当前登录用户用户名
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            operationLogEntity.setOperUserName(username);
             //请求IP
             operationLogEntity.setOperIp(IPUtils.getIpAddr(request));
             //请求URI
             operationLogEntity.setOperUri(request.getRequestURI());
-            //创建时间//TODO
+            //创建时间
             operationLogEntity.setOperCreateTime(new Date());
             //操作版本
-            operationLogEntity.setOperVersion(operVersion);
+            operationLogEntity.setOperVersion(Long.toString(System.currentTimeMillis()));
             operationLogService.save(operationLogEntity);
         }catch (Exception e){
             e.printStackTrace();
@@ -166,16 +178,18 @@ public class OperLogAspect {
             exceptionLogEntity.setExcName(e.getClass().getName());
             //异常信息
             exceptionLogEntity.setExcMessage(this.stackTraceToString(e.getClass().getName(), e.getMessage(), e.getStackTrace()));
-            //操作员ID//TODO
+            //操作员ID
             exceptionLogEntity.setOperUserId("11111");
-            //操作员名称//TODO
-            exceptionLogEntity.setOperUserName("system");
+            //操作员名称
+            //获取当前登录用户用户名
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            exceptionLogEntity.setOperUserName(username);
             //请求IP
             exceptionLogEntity.setOperIp(IPUtils.getIpAddr(request));
             //请求URI
             exceptionLogEntity.setOperUri(request.getRequestURI());
-            exceptionLogEntity.setOperVersion(operVersion);
-            //TODO
+            exceptionLogEntity.setOperVersion(Long.toString(System.currentTimeMillis()));
+
             exceptionLogEntity.setOperCreateTime(new Date());
             exceptionLogService.save(exceptionLogEntity);
         } catch (Exception e2) {

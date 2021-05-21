@@ -2,4 +2,11 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.shiliang.icor.mapper.AttachmentMapper">
 
+    <select id="findByEntityTypeAndEntityId" resultType="com.shiliang.icor.pojo.vo.AttachmentVO">
+        select *
+        from t_attachment
+        where entity_type = #{param1,jdbcType=VARCHAR}
+          and entity_id = #{param2,jdbcType=VARCHAR}
+          and is_deleted = 0;
+    </select>
 </mapper>

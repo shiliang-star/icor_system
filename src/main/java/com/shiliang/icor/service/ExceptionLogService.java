@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.shiliang.icor.pojo.entity.ExceptionLogEntity;
 import com.shiliang.icor.pojo.vo.ExceptionLogSearchForm;
 
+import javax.servlet.http.HttpServletResponse;
+
 /**
  * <p>
  *  服务类
@@ -17,4 +19,6 @@ import com.shiliang.icor.pojo.vo.ExceptionLogSearchForm;
 public interface ExceptionLogService extends IService<ExceptionLogEntity> {
 
     Page<ExceptionLogEntity> pageExceptionLogCondition(Integer currentPage, Integer pageSize, ExceptionLogSearchForm exceptionLogSearchForm);
+
+    void exportExcel(HttpServletResponse response);
 }

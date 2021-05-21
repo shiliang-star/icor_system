@@ -1,85 +1,119 @@
 package com.shiliang.icor.service.impl;
 
 
-
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSClientBuilder;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shiliang.icor.mapper.AttachmentMapper;
-import com.shiliang.icor.pojo.CommonResult;
 import com.shiliang.icor.pojo.entity.AttachmentEntity;
+import com.shiliang.icor.pojo.entity.ConferenceEntity;
+import com.shiliang.icor.pojo.entity.ManuscriptEntity;
+import com.shiliang.icor.pojo.enums.BusinessTypeEnum;
+import com.shiliang.icor.pojo.vo.AttachmentBusinessObjectSearch;
 import com.shiliang.icor.pojo.vo.AttachmentSearchForm;
+import com.shiliang.icor.pojo.vo.AttachmentVO;
 import com.shiliang.icor.service.AttachmentService;
-import com.shiliang.icor.utils.ConstantPropertiesUtils;
-import org.joda.time.DateTime;
+import com.shiliang.icor.service.CodeGeneratorService;
+import com.shiliang.icor.service.ConferenceService;
+import com.shiliang.icor.service.ManuscriptService;
+import com.shiliang.icor.utils.DatabaseTableConstant;
+import com.shiliang.icor.utils.OSSUploadUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.UUID;
+import java.util.Date;
+import java.util.List;
 
 /**
  * <p>
- *  服务实现类
+ * 服务实现类
  * </p>
  *
  * @author ShiLiang
  * @since 2021-02-25
  */
 @Service
+@Slf4j
 public class AttachmentServiceImpl extends ServiceImpl<AttachmentMapper, AttachmentEntity> implements AttachmentService {
 
+    @Autowired
+    private CodeGeneratorService codeGeneratorService;
+
+    @Autowired
+    private ConferenceService conferenceService;
+
+    @Autowired
+    private ManuscriptService manuscriptService;
+
     @Override
-    public CommonResult upload(MultipartFile file) {
-        try {
-            // Endpoint以杭州为例，其它Region请按实际情况填写。
-            String endpoint = ConstantPropertiesUtils.END_POINT;
-            // 云账号AccessKey有所有API访问权限，建议遵循阿里云安全最佳实践，创建并使用RAM子账号进行API访问或日常运维，请登录 https://ram.console.aliyun.com 创建。
-            String accessKeyId = ConstantPropertiesUtils.ACCESS_KEY_ID;
-            String accessKeySecret = ConstantPropertiesUtils.ACCESS_KEY_SECRET;
-            String bucketName = ConstantPropertiesUtils.BUCKET_NAME;
-
-            // 创建OSSClient实例。
-            OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
-
-            //获取文件名称
-            String filename = file.getOriginalFilename();
-
-            //在文件名称里面添加随机唯一的值
-            String uuid = UUID.randomUUID().toString().replaceAll("-","");
-
-            filename = uuid + filename;
-
-            //把文件按照日期进行分类
-            String datePath = new DateTime().toString("yyyy/MM/dd");
-
-            filename = datePath + "/" + filename;
-
-            // 上传文件流。
-            InputStream inputStream = file.getInputStream();
-
-            //第二个参数 上传到oss文件路径和文件名称
-            ossClient.putObject(bucketName,filename, inputStream);
-
-            // 关闭OSSClient。
-            ossClient.shutdown();
-
-            //把文件路径返回
-            String url = "https://" + bucketName + "." + endpoint + "/" + filename;
-            return CommonResult.success(url);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+    public String upload(String businessType, MultipartFile file) {
+        String[] fileInfo = OSSUploadUtil.upload(file);
+        assert fileInfo != null;
+        String url =  fileInfo[0];
+        String fileName =  fileInfo[1];
+        log.info("阿里云上传的文件路径：" + url);
+        AttachmentEntity attachmentEntity = new AttachmentEntity();
+        attachmentEntity.setUrl(url);
+        attachmentEntity.setFileName(fileName);
+        if (businessType.equals(DatabaseTableConstant.MANUSCRIPT)) {
+            attachmentEntity.setEntityType(DatabaseTableConstant.MANUSCRIPT);
+        } else if (businessType.equals(DatabaseTableConstant.CONFERENCE)) {
+            attachmentEntity.setEntityType(DatabaseTableConstant.CONFERENCE);
         }
-        return null;
+        attachmentEntity.setName(file.getOriginalFilename());
+        attachmentEntity.setCode(codeGeneratorService.getCodeSerialByOptimisticLock(BusinessTypeEnum.Attachment.name()));
+        //写入到数据库中
+        return baseMapper.insert(attachmentEntity) > 0 ? attachmentEntity.getId() : null;
     }
 
     @Override
     public Page<AttachmentEntity> pageAttachmentCondition(Integer currentPage, Integer pageSize, AttachmentSearchForm attachmentSearchForm) {
-        return null;
+        Page<AttachmentEntity> page = new Page<AttachmentEntity>(currentPage, pageSize);
+        QueryWrapper<AttachmentEntity> queryWrapper = new QueryWrapper<AttachmentEntity>();
+        String name = attachmentSearchForm.getName();
+        String code = attachmentSearchForm.getCode();
+        Date startTime = attachmentSearchForm.getStartTime();
+        Date endTime = attachmentSearchForm.getEndTime();
+        if (!StringUtils.isEmpty(name)) {
+            queryWrapper.like("name", name);
+        }
+        if (!StringUtils.isEmpty(code)) {
+            queryWrapper.like("code", code);
+        }
+        //排序
+        queryWrapper.orderByDesc("creation_time");
+
+        if (startTime != null && endTime != null) {
+            queryWrapper.between("creation_time", startTime, endTime);
+        }
+        baseMapper.selectPage(page, queryWrapper);
+        List<AttachmentEntity> attachmentEntities = page.getRecords();
+        for (AttachmentEntity attachmentEntity : attachmentEntities) {
+            String entityId = attachmentEntity.getEntityId();
+            if (entityId != null) {
+                if (DatabaseTableConstant.CONFERENCE.equals(attachmentEntity.getEntityType())) {
+                    ConferenceEntity conferenceEntity = conferenceService.getOne(new QueryWrapper<ConferenceEntity>().eq("id", entityId).select("name"));
+                    if (conferenceEntity != null) {
+                        attachmentEntity.setBusinessName(conferenceEntity.getName());
+                    }
+                } else if (DatabaseTableConstant.MANUSCRIPT.equals(attachmentEntity.getEntityType())) {
+                    ManuscriptEntity manuscriptEntity = manuscriptService.getOne(new QueryWrapper<ManuscriptEntity>().eq("id", entityId).select("name"));
+                    if (manuscriptEntity != null) {
+                        attachmentEntity.setBusinessName(manuscriptEntity.getName());
+                    }
+                }
+            }
+        }
+        page.setRecords(attachmentEntities);
+        return page;
     }
+
+    @Override
+    public List<AttachmentVO> getAttachmentByBusinessObject(AttachmentBusinessObjectSearch attachmentBusinessObjectSearch) {
+        return baseMapper.findByEntityTypeAndEntityId(attachmentBusinessObjectSearch.getEntityType(), attachmentBusinessObjectSearch.getEntityId());
+    }
+
 }

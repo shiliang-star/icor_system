@@ -8,10 +8,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.shiliang.icor.listener.DataEasyExcelListener;
 import com.shiliang.icor.mapper.ConferenceMapper;
+import com.shiliang.icor.pojo.entity.AttachmentEntity;
 import com.shiliang.icor.pojo.entity.ConferenceEntity;
 import com.shiliang.icor.pojo.enums.BusinessTypeEnum;
 import com.shiliang.icor.pojo.excel.ExcelConference;
 import com.shiliang.icor.pojo.vo.ConferenceSearchForm;
+import com.shiliang.icor.service.AttachmentService;
 import com.shiliang.icor.service.CodeGeneratorService;
 import com.shiliang.icor.service.ConferenceService;
 import com.shiliang.icor.utils.ExcelUtils;
@@ -44,10 +46,20 @@ public class ConferenceServiceImpl extends ServiceImpl<ConferenceMapper, Confere
     @Autowired
     private CodeGeneratorService codeGeneratorService;
 
+    @Autowired
+    private AttachmentService attachmentService;
+
     @Override
-    public Boolean saveConference(ConferenceEntity conferenceEntity) {
+    public Boolean saveConference(ConferenceEntity conferenceEntity, String attachmentId) {
         conferenceEntity.setCode(codeGeneratorService.getCodeSerialByOptimisticLock(BusinessTypeEnum.Conference.name()));
-        return baseMapper.insert(conferenceEntity) > 0;
+        int insert = baseMapper.insert(conferenceEntity);
+        if (insert > 0 && attachmentId != null) {
+            //更新附件
+            AttachmentEntity attachmentEntity = attachmentService.getById(attachmentId);
+            attachmentEntity.setEntityId(conferenceEntity.getId());
+            return attachmentService.updateById(attachmentEntity);
+        }
+        return false;
     }
 
     @Override

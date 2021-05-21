@@ -39,11 +39,18 @@ public class AttachmentEntity extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "附件存储在OSS上的URL")
     private String url;
 
+    @ApiModelProperty(value = "OSS上的文件名")
+    private String fileName;
+
     @ApiModelProperty(value = "文件属于那个表")
     private String entityType;
 
     @ApiModelProperty(value = "文件属于那个表主键")
     private String entityId;
+
+    @ApiModelProperty(value = "具体业务名称")
+    @TableField(exist = false)
+    private String businessName;
 
     @ApiModelProperty(value = "上传人")
     @TableField(fill = FieldFill.INSERT)

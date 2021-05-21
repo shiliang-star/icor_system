@@ -80,12 +80,20 @@ public interface ManuscriptService extends IService<ManuscriptEntity> {
 
     List<ManuscriptEntity> rejectManuscript(String[] ids, String rejectReason);
 
-    void saveUserManuscriptRealtionShip(String manuscriptId, String[] userIds);
+    void saveUserManuscriptRelationShip(String manuscriptId, String[] userIds);
 
     void exportExcel(HttpServletRequest request, HttpServletResponse response, ManuscriptSearchForm manuscriptSearchForm);
 
     void importManuscriptExcel(MultipartFile file) throws IOException;
 
-    String uploadOSS(MultipartFile file);
+
+    ManuscriptVO findById(String id);
+
+    /**
+     * 批量删除稿件
+     * @param arrayIds
+     * @return
+     */
+    boolean batchRemoveByIds(String[] arrayIds);
 
 }

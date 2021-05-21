@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 
 import com.shiliang.icor.exception.ApiException;
+import com.shiliang.icor.exception.Asserts;
 import com.shiliang.icor.listener.DataEasyExcelListener;
 import com.shiliang.icor.pojo.entity.*;
 import com.shiliang.icor.mapper.ManuscriptMapper;
@@ -62,8 +63,6 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
     @Autowired
     private UserManuscriptService userManuscriptService;
 
-    @Autowired
-    private ManuscriptMapper manuscriptMapper;
 
     @Autowired
     private TokenManager tokenManager;
@@ -77,6 +76,11 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
     @Autowired
     private AttachmentService attachmentService;
 
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private ConferenceService conferenceService;
 
 
     @Override
@@ -162,6 +166,9 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
     @Override
     public Boolean updateManuscript(ManuscriptEntity manuscriptEntity) {
         ManuscriptEntity manuscript = baseMapper.selectById(manuscriptEntity.getId());
+        if (!ManuscriptStatus.Saved.getCode().equals(manuscript.getStatus())) {
+            throw new ApiException("稿件" + manuscript.getCode() + "在当前状态下不可修改");
+        }
         //使用乐观锁
         manuscriptEntity.setVersion(manuscript.getVersion());
         return baseMapper.updateById(manuscriptEntity) > 0;
@@ -189,12 +196,15 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
         try {
             List<ManuscriptEntity> manuscriptEntityList=baseMapper.findByIdIn(ids);
             for (ManuscriptEntity manuscriptEntity : manuscriptEntityList) {
+                if (!ManuscriptStatus.Saved.getCode().equals(manuscriptEntity.getStatus())) {
+                    throw new ApiException("稿件" + manuscriptEntity.getCode() + "在当前状态下不可提交");
+                }
                 manuscriptEntity.setStatus(ManuscriptStatus.Committed.getCode());
                 baseMapper.updateById(manuscriptEntity);
             }
             return manuscriptEntityList;
         } catch (Exception e) {
-            throw new ApiException("提交稿件失败");
+            throw new ApiException("提交稿件失败:"+e.getMessage());
         }
     }
 
@@ -204,12 +214,19 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
         try {
             List<ManuscriptEntity> manuscriptEntityList=baseMapper.findByIdIn(ids);
             for (ManuscriptEntity manuscriptEntity : manuscriptEntityList) {
+                int count = userManuscriptService.count(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", manuscriptEntity.getId()));
+                if (count > 0) {
+                    throw new ApiException("稿件" + manuscriptEntity.getCode() + "已被分配，不可回收");
+                }
+                if (!ManuscriptStatus.Committed.getCode().equals(manuscriptEntity.getStatus())) {
+                    throw new ApiException("稿件" + manuscriptEntity.getStatus() + "在当前状态下不可回收");
+                }
                 manuscriptEntity.setStatus(ManuscriptStatus.Saved.getCode());
                 baseMapper.updateById(manuscriptEntity);
             }
             return manuscriptEntityList;
         } catch (Exception e) {
-            throw new ApiException("回收稿件失败");
+            throw new ApiException("回收稿件失败：" + e.getMessage());
         }
     }
 
@@ -232,10 +249,32 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
             boolean result = userManuscriptService.update(userManuscriptEntity, new QueryWrapper<UserManuscriptEntity>().eq("user_id", userId).eq("manuscript_id", manuscriptId));
             //审批之后做处理
             manuscriptAfterApprove(approveAttitude, manuscriptId);
+            //更新审搞进度
+            updateExamProgress(manuscriptId);
             return result ? userManuscriptEntity : null;
         } catch (Exception e) {
             throw new ApiException("审稿稿件异常："+e.getMessage());
         }
+    }
+
+    /**
+     * 更新审稿进度
+     * @param manuscriptId
+     */
+    private void updateExamProgress(String manuscriptId) {
+        List<UserManuscriptEntity> manuscriptEntities = userManuscriptService.list(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", manuscriptId).select("is_approved"));
+        //总的审核人数
+        int totalCount = manuscriptEntities.size();
+        //已审人数
+        int approvedCount = 0;
+        for (UserManuscriptEntity manuscriptEntity : manuscriptEntities) {
+            if (manuscriptEntity.getIsApproved() == 1) {
+                approvedCount++;
+            }
+        }
+        ManuscriptEntity manuscriptEntity = baseMapper.selectById(manuscriptId);
+        manuscriptEntity.setExamProgress((approvedCount / totalCount) * 100);
+        this.baseMapper.updateById(manuscriptEntity);
     }
 
 
@@ -377,7 +416,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
             }
             return manuscriptEntityList;
         } catch (Exception e) {
-            throw new ApiException("取消审核稿件失败");
+            throw new ApiException("取消审核稿件失败" + e.getMessage());
         }
     }
 
@@ -396,7 +435,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
     }
 
     @Override
-    public void saveUserManuscriptRealtionShip(String manuscriptId, String[] userIds) {
+    public void saveUserManuscriptRelationShip(String manuscriptId, String[] userIds) {
         userManuscriptService.remove(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", manuscriptId));
 
         List<UserManuscriptEntity> userManuscriptEntities = new ArrayList<>();
@@ -437,12 +476,12 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
                     //如果用户拥有审稿专员角色
                     if (RoleEnum.REVIEW.getCode().equals(roleEntity.getRoleCode()) && isFromApprovedList != null && isFromApprovedList == 1) {
                         //审稿人模糊匹配
-                        queryWrapper.like("u.nick_name", "%" + nickName + "%");
+                        queryWrapper.like("nick_name", "%" + nickName + "%");
                     }
                     //如果用户是普通用户（投稿）
                     if (RoleEnum.CONTRIBUTOR.getCode().equals(roleEntity.getRoleCode()) && isFromVotedList != null && isFromVotedList == 1) {
                         //投稿人精准匹配
-                        queryWrapper.eq("m.contributor", nickName);
+                        queryWrapper.eq("contributor", nickName);
                     }
                 }
             }
@@ -485,16 +524,87 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
         this.saveBatch(manuscriptEntities);
     }
 
+
+
     @Override
-    public String uploadOSS(MultipartFile file) {
-        String url = OSSUtil.upload(file);
-        log.info("阿里云上传的文件路径：" + url);
-        AttachmentEntity attachmentEntity = new AttachmentEntity();
-        attachmentEntity.setUrl(url);
-        attachmentEntity.setEntityType(DatabaseTableConstant.MANUSCRIPT);
-        attachmentEntity.setName(file.getOriginalFilename());
-        attachmentEntity.setCode(codeGeneratorService.getCodeSerialByOptimisticLock(BusinessTypeEnum.Attachment.name()));
-        //写入到数据库中
-        return attachmentService.save(attachmentEntity) ? attachmentEntity.getId() : null;
+    public ManuscriptVO findById(String id) {
+        if (id == null) {
+            Asserts.fail("稿件主键不能为空");
+        }
+        ManuscriptEntity manuscriptEntity = this.baseMapper.selectById(id);
+        ManuscriptVO manuscriptVO = new ManuscriptVO();
+        BeanUtils.copyProperties(manuscriptEntity, manuscriptVO);
+        //所属国际会议
+        ConferenceEntity conferenceEntity = conferenceService.getOne(new QueryWrapper<ConferenceEntity>().eq("id", manuscriptEntity.getConferenceId()));
+        if (conferenceEntity != null) {
+            manuscriptVO.setConference(conferenceEntity.getName());
+        }
+        //审稿人
+        List<UserManuscriptEntity> userManuscriptEntities = userManuscriptService.list(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", id));
+        int size = userManuscriptEntities.size();
+        StringBuilder sb = new StringBuilder();
+        int titleIdea = 0;
+        int filedIdea = 0;
+        int scienceLev = 0;
+        int txtValue = 0;
+        int titleCharm = 0;
+        int egLeval = 0;
+        int introReal = 0;
+        for (UserManuscriptEntity userManuscriptEntity : userManuscriptEntities) {
+            UserEntity userEntity = userService.getOne(new QueryWrapper<UserEntity>().eq("id", userManuscriptEntity.getUserId()));
+            if (userManuscriptEntity.getTitleIdea() != null) {
+                titleIdea += Integer.parseInt(userManuscriptEntity.getTitleIdea());
+            }
+            if (userManuscriptEntity.getFiledIdea() != null) {
+                filedIdea += Integer.parseInt(userManuscriptEntity.getFiledIdea());
+            }
+            if (userManuscriptEntity.getScienceLev() != null) {
+                scienceLev += Integer.parseInt(userManuscriptEntity.getScienceLev());
+            }
+            if (userManuscriptEntity.getTxtValue() != null) {
+                txtValue += Integer.parseInt(userManuscriptEntity.getTxtValue());
+            }
+            if (userManuscriptEntity.getTitleCharm() != null) {
+                titleCharm += Integer.parseInt(userManuscriptEntity.getTitleCharm());
+            }
+            if (userManuscriptEntity.getEgLeval() != null) {
+                egLeval += Integer.parseInt(userManuscriptEntity.getEgLeval());
+            }
+            if (userManuscriptEntity.getIntroReal() != null) {
+                introReal += Integer.parseInt(userManuscriptEntity.getIntroReal());
+            }
+            sb.append(userEntity.getNickName()).append(" ");
+        }
+        manuscriptVO.setReviewer(sb.toString());
+        //获取稿件审批信息
+        manuscriptVO.setTitleIdea((titleIdea/size)+"分");
+        manuscriptVO.setFiledIdea((filedIdea/size)+"分");
+        manuscriptVO.setScienceLev((scienceLev/size)+"分");
+        manuscriptVO.setTxtValue((txtValue/size)+"分");
+        manuscriptVO.setTitleCharm((titleCharm/size)+"分");
+        manuscriptVO.setEgLeval((egLeval/size)+"分");
+        manuscriptVO.setIntroReal((introReal/size)+"分");
+
+        //处理状态
+        Integer status = manuscriptEntity.getStatus();
+        manuscriptVO.setStatusName(status == 1 ? "待处理" : status == 2 ? "已提交" : status == 3 ? "审批中" : status == 4 ? "审批通过" : status == 5 ? "审批不通过" : "已驳回");
+        //更新浏览数量
+        manuscriptEntity.setViewCount(manuscriptEntity.getViewCount() + 1);
+        this.baseMapper.updateById(manuscriptEntity);
+
+        return manuscriptVO;
+    }
+
+    @Override
+    public boolean batchRemoveByIds(String[] ids) {
+        List<ManuscriptEntity> manuscriptEntityList = baseMapper.findByIdIn(ids);
+        //状态校验
+        for (ManuscriptEntity manuscriptEntity : manuscriptEntityList) {
+            if (manuscriptEntity.getStatus().equals(ManuscriptStatus.Committed.getCode()) || manuscriptEntity.getStatus().equals(ManuscriptStatus.Approving.getCode())) {
+                throw new ApiException("稿件"+manuscriptEntity.getCode()+"在当前状态下不可删除");
+            }
+        }
+        //批量删除
+        return this.baseMapper.deleteBatchIds(Arrays.asList(ids)) > 0;
     }
 }

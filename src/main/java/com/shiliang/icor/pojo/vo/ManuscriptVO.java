@@ -48,11 +48,35 @@ public class ManuscriptVO {
     @ApiModelProperty(value = "所属会议")
     private String conference;
 
-    @ApiModelProperty(value = "审稿阶段")
-    private String examStage;
+    @ApiModelProperty(value = "审稿进度")
+    private Integer examProgress;
 
     @ApiModelProperty(value = "稿件状态")
     private Integer status;
+
+    @ApiModelProperty(value = "稿件状态名称")
+    private String statusName;
+
+    @ApiModelProperty(value = "主题前沿性与新颖性（平均）")
+    private String titleIdea;
+
+    @ApiModelProperty(value = "研究内容的创新程度（平均）")
+    private String filedIdea;
+
+    @ApiModelProperty(value = "整体学术水平（平均）")
+    private String scienceLev;
+
+    @ApiModelProperty(value = "发表价值与意义（平均）")
+    private String txtValue;
+
+    @ApiModelProperty(value = "题目准确性与吸引力（平均）")
+    private String titleCharm;
+
+    @ApiModelProperty(value = "英文摘要的写作质量（平均）")
+    private String egLeval;
+
+    @ApiModelProperty(value = "前言是否准确反映国内外最新研究现状（平均）")
+    private String introReal;
 
     @ApiModelProperty(value = "创建时间")
     @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd")

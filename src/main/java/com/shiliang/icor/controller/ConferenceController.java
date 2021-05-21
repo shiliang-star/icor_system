@@ -5,10 +5,12 @@ import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shiliang.icor.pojo.CommonResult;
 import com.shiliang.icor.pojo.entity.ConferenceEntity;
+import com.shiliang.icor.pojo.enums.OperTypeConst;
 import com.shiliang.icor.pojo.excel.ExcelConference;
 import com.shiliang.icor.pojo.vo.ConferenceSearchForm;
 import com.shiliang.icor.service.ConferenceService;
 import com.shiliang.icor.utils.ExcelUtils;
+import com.shiliang.icor.utils.OperLog;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -42,6 +44,7 @@ public class ConferenceController {
 
 
     @ApiOperation("分页条件查询会议信息")
+    @OperLog(operModule = "国际会议模块", operType = OperTypeConst.GET, operDesc = "分页条件查询会议信息")
     @PostMapping("list/{currentPage}/{pageSize}")
     public CommonResult<Page<ConferenceEntity>> pageConferenceCondition(@ApiParam(name = "currentPage", value = "当前页码", required = true, defaultValue = "1")
                                                                         @PathVariable Integer currentPage,
@@ -60,14 +63,16 @@ public class ConferenceController {
      * @param conferenceEntity
      * @return
      */
-    @ApiOperation("添加会议")
+    @ApiOperation("新增会议")
+    @OperLog(operModule = "国际会议模块", operType = OperTypeConst.ADD, operDesc = "新增会议")
     @PostMapping
-    public CommonResult<ConferenceEntity> saveConference(@RequestBody ConferenceEntity conferenceEntity) {
-        Boolean save = conferenceService.saveConference(conferenceEntity);
+    public CommonResult<ConferenceEntity> saveConference(@RequestBody ConferenceEntity conferenceEntity,@RequestParam(value = "attachmentId", required = false) String attachmentId) {
+        Boolean save = conferenceService.saveConference(conferenceEntity,attachmentId);
         return save ? CommonResult.success(conferenceEntity) : CommonResult.failed();
     }
 
     @ApiOperation("修改会议")
+    @OperLog(operModule = "国际会议模块", operType = OperTypeConst.UPDATE, operDesc = "修改会议")
     @PutMapping
     public CommonResult updateManuscript(@RequestBody ConferenceEntity conferenceEntity) {
         Boolean result = conferenceService.updateManuscript(conferenceEntity);
@@ -75,6 +80,7 @@ public class ConferenceController {
     }
 
     @ApiOperation("删除会议")
+    @OperLog(operModule = "国际会议模块", operType = OperTypeConst.DELETE, operDesc = "删除会议")
     @DeleteMapping("{id}")
     public CommonResult deleteManuscript(@PathVariable String id) {
         boolean result = conferenceService.removeById(id);
@@ -82,18 +88,21 @@ public class ConferenceController {
     }
 
     @ApiOperation("根据id获取会议信息")
+    @OperLog(operModule = "国际会议模块", operType = OperTypeConst.GET, operDesc = "根据id获取会议信息")
     @GetMapping("{id}")
     public CommonResult<ConferenceEntity> getManuscriptById(@PathVariable String id) {
         return CommonResult.success(conferenceService.getById(id));
     }
 
     @ApiOperation("获取所有会议")
+    @OperLog(operModule = "国际会议模块", operType = OperTypeConst.GET, operDesc = "获取所有会议信息")
     @GetMapping("list")
     public CommonResult<List<ConferenceEntity>> list() {
         return CommonResult.success(conferenceService.list(null));
     }
 
     @ApiOperation("批量删除会议")
+    @OperLog(operModule = "国际会议模块", operType = OperTypeConst.DELETE, operDesc = "批量删除会议信息")
     @DeleteMapping("batchDelete")
     public CommonResult batchDelete(@RequestParam("ids") String ids) {
         String[] arrayIds = ids.split(",");
@@ -102,6 +111,7 @@ public class ConferenceController {
     }
 
     @ApiOperation("导出")
+    @OperLog(operModule = "国际会议模块", operType = OperTypeConst.EXPORT, operDesc = "导出会议信息")
     @GetMapping("export")
     public CommonResult exportExcel(HttpServletResponse response) throws IOException {
         conferenceService.exportExcel(response);
@@ -109,11 +119,13 @@ public class ConferenceController {
     }
 
     @ApiOperation("导入")
+    @OperLog(operModule = "国际会议模块", operType = OperTypeConst.IMPORT, operDesc = "导入会议信息")
     @RequestMapping(value = "/import", method = {RequestMethod.GET, RequestMethod.POST})
     public CommonResult importConferenceExcel(MultipartFile file) throws IOException {
         conferenceService.importConferenceExcel(file);
         return CommonResult.success(null);
     }
+
 
 }
 

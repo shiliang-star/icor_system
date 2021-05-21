@@ -11,7 +11,7 @@
         <foreach collection="ids" separator="," item="id" open="(" close=")">
             #{id}
         </foreach>
-        and dr=0
+        and is_deleted=0
     </select>
 
     <select id="page" resultType="com.shiliang.icor.pojo.vo.ManuscriptVO">

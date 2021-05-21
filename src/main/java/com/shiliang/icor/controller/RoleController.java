@@ -5,7 +5,9 @@ package com.shiliang.icor.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shiliang.icor.pojo.entity.RoleEntity;
+import com.shiliang.icor.pojo.enums.OperTypeConst;
 import com.shiliang.icor.service.RoleService;
+import com.shiliang.icor.utils.OperLog;
 import com.shiliang.icor.utils.Result;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -32,6 +34,7 @@ public class RoleController {
     private RoleService roleService;
 
     @ApiOperation(value = "获取角色分页列表")
+    @OperLog(operModule = " 角色模块", operType = OperTypeConst.GET, operDesc = "获取角色分页列表")
     @GetMapping("{page}/{limit}")
     public Result index(
             @ApiParam(name = "page", value = "当前页码", required = true)
@@ -50,6 +53,7 @@ public class RoleController {
     }
 
     @ApiOperation(value = "获取角色")
+    @OperLog(operModule = " 角色模块", operType = OperTypeConst.GET, operDesc = "获取角色")
     @GetMapping("get/{id}")
     public Result get(@PathVariable String id) {
         RoleEntity roleEntity = roleService.getById(id);
@@ -57,6 +61,7 @@ public class RoleController {
     }
 
     @ApiOperation(value = "新增角色")
+    @OperLog(operModule = " 角色模块", operType = OperTypeConst.ADD, operDesc = "新增角色")
     @PostMapping("save")
     public Result save(@RequestBody RoleEntity roleEntity) {
         roleService.save(roleEntity);
@@ -64,6 +69,7 @@ public class RoleController {
     }
 
     @ApiOperation(value = "修改角色")
+    @OperLog(operModule = " 角色模块", operType = OperTypeConst.UPDATE, operDesc = "修改角色")
     @PutMapping("update")
     public Result updateById(@RequestBody RoleEntity roleEntity) {
         roleService.updateById(roleEntity);
@@ -71,6 +77,7 @@ public class RoleController {
     }
 
     @ApiOperation(value = "删除角色")
+    @OperLog(operModule = " 角色模块", operType = OperTypeConst.DELETE, operDesc = "删除角色")
     @DeleteMapping("remove/{id}")
     public Result remove(@PathVariable String id) {
         roleService.removeById(id);
@@ -78,6 +85,7 @@ public class RoleController {
     }
 
     @ApiOperation(value = "根据id列表删除角色")
+    @OperLog(operModule = " 角色模块", operType = OperTypeConst.DELETE, operDesc = "根据id列表删除角色")
     @DeleteMapping("batchRemove")
     public Result batchRemove(@RequestBody List<String> idList) {
         roleService.removeByIds(idList);

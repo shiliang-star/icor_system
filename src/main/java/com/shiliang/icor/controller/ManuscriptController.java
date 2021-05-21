@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -53,6 +54,7 @@ public class ManuscriptController {
     private TokenManager tokenManager;
 
     @ApiOperation("分页条件查询稿件信息")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.GET, operDesc = "分页条件查询稿件信息")
     @PostMapping("list/{currentPage}/{pageSize}")
     public CommonResult<Page<ManuscriptVO>> pageManuscriptCondition(@ApiParam(name = "currentPage", value = "当前页码", required = true, defaultValue = "1")
                                                                         @PathVariable Integer currentPage,
@@ -65,8 +67,8 @@ public class ManuscriptController {
     }
 
     @ApiOperation("添加稿件")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.ADD, operDesc = "新增稿件")
     @PostMapping
-    @OperLog(operModule = "稿件模块", operType = OperTypeConst.ADD, operDesc = "添加稿件")
     public CommonResult saveManuscript(HttpServletRequest request, @RequestBody ManuscriptEntity manuscriptEntity, @RequestParam(value = "attachmentId", required = false) String attachmentId) {
         UserEntity userEntity = tokenManager.getUserInfoByToken(request);
         manuscriptEntity.setContributor(userEntity.getNickName());
@@ -84,6 +86,7 @@ public class ManuscriptController {
 
     @ApiOperation("删除稿件")
     @DeleteMapping("{id}")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.DELETE, operDesc = "删除稿件")
     public CommonResult deleteManuscript(@PathVariable String id) {
         ManuscriptEntity manuscriptEntity = manuscriptService.getById(id);
         if (manuscriptEntity.getStatus().equals(ManuscriptStatus.Committed.getCode()) || manuscriptEntity.getStatus().equals(ManuscriptStatus.Approving.getCode())) {
@@ -93,13 +96,24 @@ public class ManuscriptController {
         return result ? CommonResult.success(id) : CommonResult.failed();
     }
 
+    @ApiOperation("批量删除稿件")
+    @DeleteMapping("batchDelete")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.DELETE, operDesc = "批量删除稿件")
+    public CommonResult batchDeleteManuscript(@RequestParam("ids") String ids) {
+        String[] arrayIds = ids.split(",");
+        boolean result = manuscriptService.batchRemoveByIds(arrayIds);
+        return result?CommonResult.success(ids):CommonResult.failed();
+    }
+
     @ApiOperation("根据id获取稿件信息")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.GET, operDesc = "根据id获取稿件信息")
     @GetMapping("{id}")
-    public CommonResult<ManuscriptEntity> getManuscriptById(@PathVariable String id) {
-        return CommonResult.success(manuscriptService.getById(id));
+    public CommonResult<ManuscriptVO> getManuscriptById(@PathVariable String id) {
+        return CommonResult.success(manuscriptService.findById(id));
     }
 
     @ApiOperation(value = "提交稿件")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.UPDATE, operDesc = "提交稿件信息")
     @PostMapping("/submit-manuscript")
     public CommonResult<ManuscriptEntity> submitManuscript(@RequestBody ManuscriptEntity manuscriptEntity,HttpServletRequest request,@RequestParam(value = "attachmentId", required = false) String attachmentId) {
         UserEntity userEntity = tokenManager.getUserInfoByToken(request);
@@ -109,22 +123,25 @@ public class ManuscriptController {
     }
 
     @ApiOperation(value = "提交稿件")
-    @PutMapping("/submit-manuscript")
-    public CommonResult<List<ManuscriptEntity>> submitManuscript(@RequestParam("id") String id) {
-        String[] ids = id.split(",");
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.UPDATE, operDesc = "提交稿件信息")
+    @PutMapping("/submit-manuscript-by-id")
+    public CommonResult<List<ManuscriptEntity>> submitManuscript(@RequestParam("manuscriptIds") String manuscriptIds) {
+        String[] ids = manuscriptIds.split(",");
         List<ManuscriptEntity> manuscriptEntityList = manuscriptService.submitManuscript(ids);
         return CommonResult.success(manuscriptEntityList, "提交稿件成功");
     }
 
     @ApiOperation(value = "回收稿件")
-    @PostMapping("/cancel-submit-manuscript")
-    public CommonResult<List<ManuscriptEntity>> cancelSubmitManuscript(@RequestParam("id") String id) {
-        String[] ids = id.split(",");
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.UPDATE, operDesc = "回收稿件信息")
+    @PutMapping("/cancel-submit-manuscript")
+    public CommonResult<List<ManuscriptEntity>> cancelSubmitManuscript(@RequestParam("manuscriptIds") String manuscriptIds) {
+        String[] ids = manuscriptIds.split(",");
         List<ManuscriptEntity> manuscriptEntityList = manuscriptService.cancelSubmitManuscript(ids);
         return CommonResult.success(manuscriptEntityList, "回收稿件成功");
     }
 
     @ApiOperation(value = "审核稿件")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.UPDATE, operDesc = "审核稿件")
     @PostMapping("/approve-manuscript")
     public CommonResult<UserManuscriptEntity> approveManuscript(HttpServletRequest request,@RequestBody UserApproveVO userApproveVO) {
         UserManuscriptEntity userManuscriptEntity = manuscriptService.approveManuscript(request,userApproveVO);
@@ -132,6 +149,7 @@ public class ManuscriptController {
     }
 
     @ApiOperation(value = "取消审核稿件")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.UPDATE, operDesc = "取消审核稿件")
     @PostMapping("/cancel-approve-manuscript")
     public CommonResult<List<ManuscriptEntity>> cancelApproveManuscript(@RequestParam("id") String id) {
         String[] ids = id.split(",");
@@ -141,6 +159,7 @@ public class ManuscriptController {
 
 
     @ApiOperation(value = "驳回稿件")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.UPDATE, operDesc = "驳回稿件")
     @PostMapping("/reject-manuscript")
     public CommonResult<List<ManuscriptEntity>> rejectManuscript(@RequestParam("id") String id, @RequestParam("remark") String rejectReason) {
         String[] ids = id.split(",");
@@ -149,14 +168,16 @@ public class ManuscriptController {
     }
 
     @ApiOperation(value = "根据用户分配稿件")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.ASSIGN, operDesc = "根据用户分配稿件")
     @PostMapping("/doAssign")
     public CommonResult doAssign(@RequestParam String manuscriptId, @RequestParam String[] userIds) {
-        manuscriptService.saveUserManuscriptRealtionShip(manuscriptId,userIds );
+        manuscriptService.saveUserManuscriptRelationShip(manuscriptId,userIds );
         return CommonResult.success(null, "分配成功");
     }
 
     @ApiOperation("导出")
-    @GetMapping("export")
+    @PostMapping("export")
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.EXPORT, operDesc = "导出稿件")
     public CommonResult exportExcel(HttpServletRequest request, HttpServletResponse response, @RequestBody(required = false) ManuscriptSearchForm manuscriptSearchForm) throws IOException {
         manuscriptService.exportExcel(request, response, manuscriptSearchForm);
         return CommonResult.success(null);
@@ -164,15 +185,11 @@ public class ManuscriptController {
 
     @ApiOperation("导入")
     @RequestMapping(value = "/import", method = {RequestMethod.GET, RequestMethod.POST})
+    @OperLog(operModule = "稿件模块", operType = OperTypeConst.IMPORT, operDesc = "导入稿件")
     public CommonResult importManuscriptExcel(MultipartFile file) throws IOException {
         manuscriptService.importManuscriptExcel(file);
         return CommonResult.success(null);
     }
 
-    @ApiOperation("附件上传阿里OSS")
-    @PostMapping("attachment/uploadOSS")
-    public CommonResult upload(MultipartFile file) {
-        return CommonResult.success(manuscriptService.uploadOSS(file));
-    }
 }
 

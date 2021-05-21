@@ -20,7 +20,7 @@ import java.io.IOException;
  */
 public interface ConferenceService extends IService<ConferenceEntity> {
 
-    Boolean saveConference(ConferenceEntity conferenceEntity);
+    Boolean saveConference(ConferenceEntity conferenceEntity, String attachmentId);
 
     Boolean updateManuscript(ConferenceEntity conferenceEntity);
 
