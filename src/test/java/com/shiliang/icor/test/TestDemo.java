@@ -39,7 +39,7 @@ public class TestDemo {
         ManuscriptEntity manuscriptEntity = new ManuscriptEntity();
         manuscriptEntity.setId("1364778971458134018");
         manuscriptEntity.setName("时亮测试的");
-        manuscriptEntity.setCode("202020202");
-        manuscriptController.updateManuscript(manuscriptEntity);
+//        manuscriptEntity.setCode("202020202");
+//        manuscriptController.updateManuscript(manuscriptEntity);
     }
 }

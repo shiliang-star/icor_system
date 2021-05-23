@@ -69,30 +69,26 @@ public class ManuscriptController {
     @ApiOperation("添加稿件")
     @OperLog(operModule = "稿件模块", operType = OperTypeConst.ADD, operDesc = "新增稿件")
     @PostMapping
-    public CommonResult saveManuscript(HttpServletRequest request, @RequestBody ManuscriptEntity manuscriptEntity, @RequestParam(value = "attachmentId", required = false) String attachmentId) {
+    public CommonResult<ManuscriptEntity> saveManuscript(HttpServletRequest request, @RequestBody ManuscriptVO manuscriptVO, @RequestParam(value = "attachmentId", required = false) String attachmentId) {
         UserEntity userEntity = tokenManager.getUserInfoByToken(request);
-        manuscriptEntity.setContributor(userEntity.getNickName());
-        Boolean result = manuscriptService.saveManuscript(manuscriptEntity,attachmentId);
-        return result ? CommonResult.success(manuscriptEntity) : CommonResult.failed();
+        manuscriptVO.setContributor(userEntity.getNickName());
+        ManuscriptEntity manuscriptEntity = manuscriptService.saveManuscript(manuscriptVO,attachmentId);
+        return manuscriptEntity != null ? CommonResult.success(manuscriptEntity) : CommonResult.failed();
     }
 
     @ApiOperation("修改稿件")
     @PutMapping
     @OperLog(operModule = "稿件模块", operType = OperTypeConst.UPDATE, operDesc = "修改稿件")
-    public CommonResult updateManuscript(@RequestBody ManuscriptEntity manuscriptEntity) {
-        Boolean result = manuscriptService.updateManuscript(manuscriptEntity);
-        return result ? CommonResult.success(manuscriptEntity) : CommonResult.failed();
+    public CommonResult<ManuscriptVO> updateManuscript(@RequestBody ManuscriptVO manuscriptVO) {
+        Boolean result = manuscriptService.updateManuscript(manuscriptVO);
+        return result ? CommonResult.success(manuscriptVO) : CommonResult.failed();
     }
 
     @ApiOperation("删除稿件")
     @DeleteMapping("{id}")
     @OperLog(operModule = "稿件模块", operType = OperTypeConst.DELETE, operDesc = "删除稿件")
     public CommonResult deleteManuscript(@PathVariable String id) {
-        ManuscriptEntity manuscriptEntity = manuscriptService.getById(id);
-        if (manuscriptEntity.getStatus().equals(ManuscriptStatus.Committed.getCode()) || manuscriptEntity.getStatus().equals(ManuscriptStatus.Approving.getCode())) {
-            throw new ApiException("已提交和审批中的稿件不可删除");
-        }
-        boolean result = manuscriptService.removeById(id);
+        boolean result = manuscriptService.deleteManuscriptById(id);
         return result ? CommonResult.success(id) : CommonResult.failed();
     }
 
@@ -115,11 +111,11 @@ public class ManuscriptController {
     @ApiOperation(value = "提交稿件")
     @OperLog(operModule = "稿件模块", operType = OperTypeConst.UPDATE, operDesc = "提交稿件信息")
     @PostMapping("/submit-manuscript")
-    public CommonResult<ManuscriptEntity> submitManuscript(@RequestBody ManuscriptEntity manuscriptEntity,HttpServletRequest request,@RequestParam(value = "attachmentId", required = false) String attachmentId) {
+    public CommonResult<ManuscriptEntity> submitManuscript(@RequestBody ManuscriptVO manuscriptVO,HttpServletRequest request,@RequestParam(value = "attachmentId", required = false) String attachmentId) {
         UserEntity userEntity = tokenManager.getUserInfoByToken(request);
-        manuscriptEntity.setContributor(userEntity.getNickName());
-        Boolean result =manuscriptService.submitManuscript(manuscriptEntity,attachmentId);
-        return result ? CommonResult.success(manuscriptEntity) : CommonResult.failed();
+        manuscriptVO.setContributor(userEntity.getNickName());
+        ManuscriptEntity manuscriptEntity =manuscriptService.submitManuscript(manuscriptVO,attachmentId);
+        return manuscriptEntity != null ? CommonResult.success(manuscriptEntity) : CommonResult.failed();
     }
 
     @ApiOperation(value = "提交稿件")

@@ -42,7 +42,7 @@ public class UserManuscriptVO {
     private Date approveTime;
 
     @ApiModelProperty(value = "审稿态度")
-    private Integer approveAttitude;
+    private String approveAttitude;
 
     @ApiModelProperty(value = "审稿意见")
     private String examOpinion;

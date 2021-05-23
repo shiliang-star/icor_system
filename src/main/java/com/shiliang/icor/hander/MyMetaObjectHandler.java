@@ -43,7 +43,7 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
             }
         }
         this.setFieldValByName("isDeleted", 0, metaObject);
-        this.setFieldValByName("examProgress", 0, metaObject);
+        this.setFieldValByName("examProgress", 0.0, metaObject);
         this.setFieldValByName("version", 1L, metaObject);
         this.setFieldValByName("viewCount", 1L, metaObject);
         this.setFieldValByName("operCreateTime", new Date(), metaObject);

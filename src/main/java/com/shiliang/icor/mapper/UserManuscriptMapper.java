@@ -31,4 +31,6 @@ public interface UserManuscriptMapper extends BaseMapper<UserManuscriptEntity> {
     Page<UserManuscriptVO> page(Page<UserManuscriptVO> page, @Param(Constants.WRAPPER) QueryWrapper queryWrapper);
 
     List<UserManuscriptVO> searchByManuscriptId(String manuscriptId);
+
+    UserManuscriptVO searchByManuscriptIdAndReviewer(String userId,String manuscriptId);
 }

@@ -42,6 +42,12 @@ public class ManuscriptVO {
     @ApiModelProperty(value = "审稿人")
     private String reviewer;
 
+    @ApiModelProperty(value = "已审人员")
+    private String alreadyReviewer;
+
+    @ApiModelProperty(value = "未审人员")
+    private String unReviewer;
+
     @ApiModelProperty(value = "浏览数量")
     private Long viewCount;
 
@@ -49,7 +55,7 @@ public class ManuscriptVO {
     private String conference;
 
     @ApiModelProperty(value = "审稿进度")
-    private Integer examProgress;
+    private Double examProgress;
 
     @ApiModelProperty(value = "稿件状态")
     private Integer status;
@@ -77,6 +83,9 @@ public class ManuscriptVO {
 
     @ApiModelProperty(value = "前言是否准确反映国内外最新研究现状（平均）")
     private String introReal;
+
+    @ApiModelProperty(value = "总平均分")
+    private String averageScore;
 
     @ApiModelProperty(value = "创建时间")
     @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd")

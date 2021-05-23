@@ -29,7 +29,7 @@ import java.util.List;
 
 /**
  * <p>
- *  服务实现类
+ * 服务实现类
  * </p>
  *
  * @author ShiLiang
@@ -71,7 +71,25 @@ public class UserManuscriptServiceImpl extends ServiceImpl<UserManuscriptMapper,
     @Override
     public List<UserManuscriptVO> getByManuscriptId(String manuscriptId) {
         Assert.notNull(manuscriptId, "稿件编号不能为空");
-        return baseMapper.searchByManuscriptId(manuscriptId);
+        List<UserManuscriptVO> userManuscriptVOS = baseMapper.searchByManuscriptId(manuscriptId);
+        for (UserManuscriptVO userManuscriptVO : userManuscriptVOS) {
+            userManuscriptVO.setEgLeval(userManuscriptVO.getEgLeval() + "分");
+            userManuscriptVO.setFiledIdea(userManuscriptVO.getFiledIdea() + "分");
+            userManuscriptVO.setIntroReal(userManuscriptVO.getIntroReal() + "分");
+            userManuscriptVO.setScienceLev(userManuscriptVO.getScienceLev() + "分");
+            userManuscriptVO.setTitleIdea(userManuscriptVO.getTitleIdea() + "分");
+            userManuscriptVO.setTitleCharm(userManuscriptVO.getTitleCharm() + "分");
+            userManuscriptVO.setTxtValue(userManuscriptVO.getTxtValue() + "分");
+            if (Integer.parseInt(userManuscriptVO.getApproveAttitude()) == 1) {
+                userManuscriptVO.setApproveAttitude("同意");
+            } else if (Integer.parseInt(userManuscriptVO.getApproveAttitude()) == 0) {
+                userManuscriptVO.setApproveAttitude("不同意");
+            } else {
+                userManuscriptVO.setApproveAttitude("驳回");
+            }
+        }
+
+        return userManuscriptVOS;
     }
 
     @Override
@@ -87,5 +105,11 @@ public class UserManuscriptServiceImpl extends ServiceImpl<UserManuscriptMapper,
             e.printStackTrace();
         }
         log.info("*******数据导出结束*******");
+    }
+
+    @Override
+    public UserManuscriptVO getByManuscriptIdAndReviewer(String userId, String manuscriptId) {
+        Assert.notNull(manuscriptId, "稿件编号不能为空");
+        return baseMapper.searchByManuscriptIdAndReviewer(userId, manuscriptId);
     }
 }

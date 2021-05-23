@@ -41,12 +41,13 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * <p>
- *  服务实现类
+ * 服务实现类
  * </p>
  *
  * @author ShiLiang
@@ -96,7 +97,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
             //查询用户的角色
             //根据用户id，查询用户拥有的角色id
             List<UserRoleEntity> userRoleEntityList = userRoleService.list(new QueryWrapper<UserRoleEntity>().eq("user_id", userId).select("role_id"));
-            List<String> roleList = userRoleEntityList.stream().map(c->c.getRoleId()).collect(Collectors.toList());
+            List<String> roleList = userRoleEntityList.stream().map(c -> c.getRoleId()).collect(Collectors.toList());
             Collection<RoleEntity> roleEntities = roleService.listByIds(roleList);
             if (!Collections.isEmpty(roleEntities)) {
                 for (RoleEntity roleEntity : roleEntities) {
@@ -136,7 +137,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
         if (startTime != null && endTime != null) {
             queryWrapper.between("m.creation_time", startTime, endTime);
         }
-        if (isApproved != null && isApproved==1) {
+        if (isApproved != null && isApproved == 1) {
             queryWrapper.eq("um.is_approved", 1);
         }
         if (isApproved != null && isApproved == 0) {
@@ -148,23 +149,29 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
     }
 
     @Override
-    public Boolean saveManuscript(ManuscriptEntity manuscriptEntity,String attachmentId) {
+    public ManuscriptEntity saveManuscript(ManuscriptVO manuscriptVO, String attachmentId) {
+        ManuscriptEntity manuscriptEntity = new ManuscriptEntity();
+        BeanUtils.copyProperties(manuscriptVO, manuscriptEntity);
+        manuscriptEntity.setConferenceId(manuscriptVO.getConference());
         manuscriptEntity.setCode(codeGeneratorService.getCodeSerialByOptimisticLock(BusinessTypeEnum.Manuscript.name()));
         //默认是待处理状态
         manuscriptEntity.setStatus(ManuscriptStatus.Saved.getCode());
         int insert = baseMapper.insert(manuscriptEntity);
-        if (insert > 0 && attachmentId != null) {
+        if (insert > 0 && attachmentId != null && !"".equals(attachmentId)) {
             //更新附件
             AttachmentEntity attachmentEntity = attachmentService.getById(attachmentId);
             attachmentEntity.setEntityId(manuscriptEntity.getId());
-            return attachmentService.updateById(attachmentEntity);
+            attachmentService.updateById(attachmentEntity);
         }
 
-        return false;
+        return manuscriptEntity;
     }
 
     @Override
-    public Boolean updateManuscript(ManuscriptEntity manuscriptEntity) {
+    public Boolean updateManuscript(ManuscriptVO manuscriptVO) {
+        ManuscriptEntity manuscriptEntity = new ManuscriptEntity();
+        BeanUtils.copyProperties(manuscriptVO, manuscriptEntity);
+        manuscriptEntity.setConferenceId(manuscriptVO.getConference());
         ManuscriptEntity manuscript = baseMapper.selectById(manuscriptEntity.getId());
         if (!ManuscriptStatus.Saved.getCode().equals(manuscript.getStatus())) {
             throw new ApiException("稿件" + manuscript.getCode() + "在当前状态下不可修改");
@@ -176,25 +183,28 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
 
     @Override
     @Transactional
-    public Boolean submitManuscript(ManuscriptEntity manuscriptEntity,String attachmentId) {
+    public ManuscriptEntity submitManuscript(ManuscriptVO manuscriptVO, String attachmentId) {
+        ManuscriptEntity manuscriptEntity = new ManuscriptEntity();
+        BeanUtils.copyProperties(manuscriptVO, manuscriptEntity);
+        manuscriptEntity.setConferenceId(manuscriptVO.getConference());
         manuscriptEntity.setCode(codeGeneratorService.getCodeSerialByOptimisticLock(BusinessTypeEnum.Manuscript.name()));
         //提交态
         manuscriptEntity.setStatus(ManuscriptStatus.Committed.getCode());
         int insert = baseMapper.insert(manuscriptEntity);
-        if (insert > 0 && attachmentId != null) {
+        if (insert > 0 && attachmentId != null && !"".equals(attachmentId)) {
             //更新附件
             AttachmentEntity attachmentEntity = attachmentService.getById(attachmentId);
             attachmentEntity.setEntityId(manuscriptEntity.getId());
-            return attachmentService.updateById(attachmentEntity);
+            attachmentService.updateById(attachmentEntity);
         }
-        return false;
+        return manuscriptEntity;
     }
 
     @Override
     @Transactional
     public List<ManuscriptEntity> submitManuscript(String[] ids) {
         try {
-            List<ManuscriptEntity> manuscriptEntityList=baseMapper.findByIdIn(ids);
+            List<ManuscriptEntity> manuscriptEntityList = baseMapper.findByIdIn(ids);
             for (ManuscriptEntity manuscriptEntity : manuscriptEntityList) {
                 if (!ManuscriptStatus.Saved.getCode().equals(manuscriptEntity.getStatus())) {
                     throw new ApiException("稿件" + manuscriptEntity.getCode() + "在当前状态下不可提交");
@@ -204,7 +214,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
             }
             return manuscriptEntityList;
         } catch (Exception e) {
-            throw new ApiException("提交稿件失败:"+e.getMessage());
+            throw new ApiException("提交稿件失败:" + e.getMessage());
         }
     }
 
@@ -212,7 +222,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
     @Transactional
     public List<ManuscriptEntity> cancelSubmitManuscript(String[] ids) {
         try {
-            List<ManuscriptEntity> manuscriptEntityList=baseMapper.findByIdIn(ids);
+            List<ManuscriptEntity> manuscriptEntityList = baseMapper.findByIdIn(ids);
             for (ManuscriptEntity manuscriptEntity : manuscriptEntityList) {
                 int count = userManuscriptService.count(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", manuscriptEntity.getId()));
                 if (count > 0) {
@@ -232,7 +242,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public UserManuscriptEntity approveManuscript(HttpServletRequest request,UserApproveVO userApproveVO) {
+    public UserManuscriptEntity approveManuscript(HttpServletRequest request, UserApproveVO userApproveVO) {
         try {
             Integer approveAttitude = userApproveVO.getApproveAttitude();
             //获取审稿人用户信息
@@ -253,12 +263,13 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
             updateExamProgress(manuscriptId);
             return result ? userManuscriptEntity : null;
         } catch (Exception e) {
-            throw new ApiException("审稿稿件异常："+e.getMessage());
+            throw new ApiException("审稿稿件异常：" + e.getMessage());
         }
     }
 
     /**
      * 更新审稿进度
+     *
      * @param manuscriptId
      */
     private void updateExamProgress(String manuscriptId) {
@@ -272,8 +283,10 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
                 approvedCount++;
             }
         }
+        DecimalFormat df = new DecimalFormat("0.00");
+
         ManuscriptEntity manuscriptEntity = baseMapper.selectById(manuscriptId);
-        manuscriptEntity.setExamProgress((approvedCount / totalCount) * 100);
+        manuscriptEntity.setExamProgress(Double.parseDouble(df.format((double) approvedCount / totalCount)) * 100);
         this.baseMapper.updateById(manuscriptEntity);
     }
 
@@ -286,13 +299,13 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
 //        如果审批态度为驳回到投稿人
         if (ApproveAttitude.REJECT.getCode().equals(approveAttitude)) {
             //回写稿件状态
-            rewriteManuscript(manuscriptId,ManuscriptStatus.Rejected.getCode());
+            rewriteManuscript(manuscriptId, ManuscriptStatus.Rejected.getCode());
             //其他审批人不需要继续审批
             otherCancelApprove(manuscriptId);
             return;
         }
         //判断所有审批人是否审批完
-        if (isApprovedEnd(manuscriptId)){
+        if (isApprovedEnd(manuscriptId)) {
             //获取稿件的所有审批记录
             List<UserManuscriptEntity> userManuscriptEntities = userManuscriptService.list(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", manuscriptId));
             Map<Integer, Integer> attitudeCountMap = new HashMap<>();
@@ -309,9 +322,33 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
             Integer approveCount = attitudeCountMap.get(ApproveAttitude.AGREE.getCode());
             //审稿不同意的人数
             Integer disApproveCount = attitudeCountMap.get(ApproveAttitude.DISAGREE.getCode());
-            if (approveCount == count || approveCount>=disApproveCount) {
+            if (approveCount == count || approveCount > disApproveCount) {
                 //所有审批人都同意或者多数胜于少数
                 rewriteManuscript(manuscriptId, ManuscriptStatus.Approved.getCode());
+            } else if (approveCount.equals(disApproveCount)) {
+                //如果同意和不同意人数一样
+                List<UserManuscriptEntity> userManuscriptEntityList = userManuscriptService.list(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", manuscriptId));
+                int totalScore = 0;
+                for (UserManuscriptEntity userManuscriptEntity : userManuscriptEntityList) {
+                    totalScore += Integer.parseInt(userManuscriptEntity.getEgLeval());
+                    totalScore += Integer.parseInt(userManuscriptEntity.getTxtValue());
+                    totalScore += Integer.parseInt(userManuscriptEntity.getTitleCharm());
+                    totalScore += Integer.parseInt(userManuscriptEntity.getScienceLev());
+                    totalScore += Integer.parseInt(userManuscriptEntity.getTitleIdea());
+                    totalScore += Integer.parseInt(userManuscriptEntity.getFiledIdea());
+                    totalScore += Integer.parseInt(userManuscriptEntity.getIntroReal());
+                }
+                //评审人数
+                int size = userManuscriptEntityList.size();
+                //及格分
+                double passingScore = ((7 * 10) * size) * (0.6);
+                if (totalScore >= passingScore) {
+                    //总分大于及格分数通过
+                    rewriteManuscript(manuscriptId, ManuscriptStatus.Approved.getCode());
+                } else {
+                    //总分小于及格分数通过
+                    rewriteManuscript(manuscriptId, ManuscriptStatus.Disapproved.getCode());
+                }
             } else {
                 //所有审批人不同意或者多数胜于少数
                 rewriteManuscript(manuscriptId, ManuscriptStatus.Disapproved.getCode());
@@ -319,9 +356,6 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
             System.out.println(attitudeCountMap);
 
         }
-
-
-
 
 
         /**
@@ -352,6 +386,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
 
     /**
      * 判断所有审批人是否审批完
+     *
      * @param manuscriptId
      * @return
      */
@@ -362,6 +397,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
 
     /**
      * 当一个人审核不同意或者驳回，其他人取消审核
+     *
      * @param manuscriptId
      */
     @Transactional(rollbackFor = Exception.class)
@@ -378,15 +414,16 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
 
     /**
      * 是否是最后一个审批人
+     *
      * @param manuscriptId
      */
     @Transactional(rollbackFor = Exception.class)
     public boolean isLastApprover(String manuscriptId) {
         List<UserManuscriptEntity> userManuscriptEntityList = userManuscriptService.list(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", manuscriptId));
         int count = userManuscriptService.count(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", manuscriptId));
-        int number=0;
+        int number = 0;
         for (UserManuscriptEntity userManuscriptEntity : userManuscriptEntityList) {
-            if (userManuscriptEntity.getIsApproved()!=null && userManuscriptEntity.getIsApproved() == 1) {
+            if (userManuscriptEntity.getIsApproved() != null && userManuscriptEntity.getIsApproved() == 1) {
                 number++;
             }
         }
@@ -395,6 +432,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
 
     /**
      * 回写稿件状态
+     *
      * @param manuscriptId
      * @param status
      */
@@ -409,7 +447,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
     @Transactional(rollbackFor = Exception.class)
     public List<ManuscriptEntity> cancelApproveManuscript(String[] ids) {
         try {
-            List<ManuscriptEntity> manuscriptEntityList=baseMapper.findByIdIn(ids);
+            List<ManuscriptEntity> manuscriptEntityList = baseMapper.findByIdIn(ids);
             for (ManuscriptEntity manuscriptEntity : manuscriptEntityList) {
                 manuscriptEntity.setStatus(ManuscriptStatus.Committed.getCode());
                 baseMapper.updateById(manuscriptEntity);
@@ -423,7 +461,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
     @Override
     public List<ManuscriptEntity> rejectManuscript(String[] ids, String rejectReason) {
         try {
-            List<ManuscriptEntity> manuscriptEntityList=baseMapper.findByIdIn(ids);
+            List<ManuscriptEntity> manuscriptEntityList = baseMapper.findByIdIn(ids);
             for (ManuscriptEntity manuscriptEntity : manuscriptEntityList) {
                 manuscriptEntity.setStatus(ManuscriptStatus.Rejected.getCode());
                 baseMapper.updateById(manuscriptEntity);
@@ -453,7 +491,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
     }
 
     @Override
-    public void exportExcel(HttpServletRequest request, HttpServletResponse response,ManuscriptSearchForm manuscriptSearchForm) {
+    public void exportExcel(HttpServletRequest request, HttpServletResponse response, ManuscriptSearchForm manuscriptSearchForm) {
         log.info("*******数据导出开始*******");
         //获取当前登陆用户
         UserEntity userEntity = tokenManager.getUserInfoByToken(request);
@@ -465,7 +503,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
             //查询用户的角色
             //根据用户id，查询用户拥有的角色id
             List<UserRoleEntity> userRoleEntityList = userRoleService.list(new QueryWrapper<UserRoleEntity>().eq("user_id", userId).select("role_id"));
-            List<String> roleList = userRoleEntityList.stream().map(c->c.getRoleId()).collect(Collectors.toList());
+            List<String> roleList = userRoleEntityList.stream().map(c -> c.getRoleId()).collect(Collectors.toList());
             Collection<RoleEntity> roleEntities = roleService.listByIds(roleList);
             if (!Collections.isEmpty(roleEntities)) {
                 for (RoleEntity roleEntity : roleEntities) {
@@ -511,7 +549,7 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
         InputStream inputStream = file.getInputStream();
         EasyExcel.read(inputStream, ExcelManuscript.class, listener).sheet(0).doRead();
         List<ExcelManuscript> data = listener.getData();
-        System.out.println("导入的稿件信息："+data);
+        System.out.println("导入的稿件信息：" + data);
 
         List<ManuscriptEntity> manuscriptEntities = new ArrayList<>();
 
@@ -523,7 +561,6 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
         //写入数据库
         this.saveBatch(manuscriptEntities);
     }
-
 
 
     @Override
@@ -543,6 +580,8 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
         List<UserManuscriptEntity> userManuscriptEntities = userManuscriptService.list(new QueryWrapper<UserManuscriptEntity>().eq("manuscript_id", id));
         int size = userManuscriptEntities.size();
         StringBuilder sb = new StringBuilder();
+        StringBuilder sb2 = new StringBuilder();
+        StringBuilder sb3 = new StringBuilder();
         int titleIdea = 0;
         int filedIdea = 0;
         int scienceLev = 0;
@@ -550,41 +589,62 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
         int titleCharm = 0;
         int egLeval = 0;
         int introReal = 0;
+        int totalScore = 0;
         for (UserManuscriptEntity userManuscriptEntity : userManuscriptEntities) {
             UserEntity userEntity = userService.getOne(new QueryWrapper<UserEntity>().eq("id", userManuscriptEntity.getUserId()));
             if (userManuscriptEntity.getTitleIdea() != null) {
                 titleIdea += Integer.parseInt(userManuscriptEntity.getTitleIdea());
+                totalScore += Integer.parseInt(userManuscriptEntity.getTitleIdea());
             }
             if (userManuscriptEntity.getFiledIdea() != null) {
                 filedIdea += Integer.parseInt(userManuscriptEntity.getFiledIdea());
+                totalScore += Integer.parseInt(userManuscriptEntity.getFiledIdea());
             }
             if (userManuscriptEntity.getScienceLev() != null) {
                 scienceLev += Integer.parseInt(userManuscriptEntity.getScienceLev());
+                totalScore += Integer.parseInt(userManuscriptEntity.getScienceLev());
             }
             if (userManuscriptEntity.getTxtValue() != null) {
                 txtValue += Integer.parseInt(userManuscriptEntity.getTxtValue());
+                totalScore += Integer.parseInt(userManuscriptEntity.getTxtValue());
             }
             if (userManuscriptEntity.getTitleCharm() != null) {
                 titleCharm += Integer.parseInt(userManuscriptEntity.getTitleCharm());
+                totalScore += Integer.parseInt(userManuscriptEntity.getTitleCharm());
             }
             if (userManuscriptEntity.getEgLeval() != null) {
                 egLeval += Integer.parseInt(userManuscriptEntity.getEgLeval());
+                totalScore += Integer.parseInt(userManuscriptEntity.getEgLeval());
             }
             if (userManuscriptEntity.getIntroReal() != null) {
                 introReal += Integer.parseInt(userManuscriptEntity.getIntroReal());
+                totalScore += Integer.parseInt(userManuscriptEntity.getIntroReal());
             }
             sb.append(userEntity.getNickName()).append(" ");
+
+            //已审人员
+            if (userManuscriptEntity.getIsApproved() == 1) {
+                sb2.append(userEntity.getNickName()).append(" ");
+            }
+            //未审人员
+            if (userManuscriptEntity.getIsApproved() == 0) {
+                sb3.append(userEntity.getNickName()).append(" ");
+            }
         }
         manuscriptVO.setReviewer(sb.toString());
+        manuscriptVO.setAlreadyReviewer(sb2.toString());
+        manuscriptVO.setUnReviewer(sb3.toString());
         //获取稿件审批信息
-        manuscriptVO.setTitleIdea((titleIdea/size)+"分");
-        manuscriptVO.setFiledIdea((filedIdea/size)+"分");
-        manuscriptVO.setScienceLev((scienceLev/size)+"分");
-        manuscriptVO.setTxtValue((txtValue/size)+"分");
-        manuscriptVO.setTitleCharm((titleCharm/size)+"分");
-        manuscriptVO.setEgLeval((egLeval/size)+"分");
-        manuscriptVO.setIntroReal((introReal/size)+"分");
-
+        if (size != 0) {
+            manuscriptVO.setTitleIdea(((double) titleIdea / (double) size) + "分");
+            manuscriptVO.setFiledIdea(((double) filedIdea / (double) size) + "分");
+            manuscriptVO.setScienceLev(((double) scienceLev / (double) size) + "分");
+            manuscriptVO.setTxtValue(((double) txtValue / (double) size) + "分");
+            manuscriptVO.setTitleCharm(((double) titleCharm / (double) size) + "分");
+            manuscriptVO.setEgLeval(((double) egLeval / (double) size) + "分");
+            manuscriptVO.setIntroReal(((double) introReal / (double) size) + "分");
+            manuscriptVO.setAverageScore(((double) totalScore / (double) size) + "分");
+        }
         //处理状态
         Integer status = manuscriptEntity.getStatus();
         manuscriptVO.setStatusName(status == 1 ? "待处理" : status == 2 ? "已提交" : status == 3 ? "审批中" : status == 4 ? "审批通过" : status == 5 ? "审批不通过" : "已驳回");
@@ -601,10 +661,32 @@ public class ManuscriptServiceImpl extends ServiceImpl<ManuscriptMapper, Manuscr
         //状态校验
         for (ManuscriptEntity manuscriptEntity : manuscriptEntityList) {
             if (manuscriptEntity.getStatus().equals(ManuscriptStatus.Committed.getCode()) || manuscriptEntity.getStatus().equals(ManuscriptStatus.Approving.getCode())) {
-                throw new ApiException("稿件"+manuscriptEntity.getCode()+"在当前状态下不可删除");
+                throw new ApiException("稿件" + manuscriptEntity.getCode() + "在当前状态下不可删除");
+            }
+            //批量删除
+            this.deleteManuscriptById(manuscriptEntity.getId());
+        }
+        return true;
+    }
+
+    @Override
+    public boolean deleteManuscriptById(String id) {
+        ManuscriptEntity manuscriptEntity = baseMapper.selectById(id);
+        if (manuscriptEntity.getStatus().equals(ManuscriptStatus.Committed.getCode()) || manuscriptEntity.getStatus().equals(ManuscriptStatus.Approving.getCode())) {
+            throw new ApiException("已提交和审批中的稿件不可删除");
+        }
+        int i = baseMapper.deleteById(id);
+        if (i > 0) {
+            //删除附件信息
+            List<AttachmentEntity> attachmentEntities = attachmentService.list(new QueryWrapper<AttachmentEntity>().eq("entity_type", DatabaseTableConstant.MANUSCRIPT).eq("entity_id", id));
+            for (AttachmentEntity attachmentEntity : attachmentEntities) {
+                boolean result = attachmentService.removeById(attachmentEntity.getId());
+                if (result) {
+                    //删除阿里云OSS
+                    OSSUploadUtil.deleteFile(attachmentEntity.getFileName());
+                }
             }
         }
-        //批量删除
-        return this.baseMapper.deleteBatchIds(Arrays.asList(ids)) > 0;
+        return true;
     }
 }

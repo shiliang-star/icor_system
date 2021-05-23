@@ -17,6 +17,7 @@
                 um.eg_leval,
                 um.intro_real,
                 um.is_approved,
+                um.allocate_time,
                 u.nick_name as username,
                 m.NAME as manuscriptName,
                 m.code as manuscriptCode
@@ -45,6 +46,7 @@
         um.filed_idea,
         um.science_lev,
         um.txt_value,
+        um.allocate_time,
         um.title_charm,
         um.eg_leval,
         um.intro_real,
@@ -57,6 +59,32 @@
         INNER JOIN acl_user u ON um.user_id = u.id
         INNER JOIN t_manuscript m ON um.manuscript_id = m.id
                 where um.is_deleted=0 and um.manuscript_id=#{manuscriptId,jdbcType=VARCHAR}
+        order by um.allocate_time desc
+    </select>
+
+    <select id="searchByManuscriptIdAndReviewer" resultType="com.shiliang.icor.pojo.vo.UserManuscriptVO">
+        SELECT
+                um.id,
+                um.approve_time,
+                um.approve_attitude,
+                um.exam_opinion,
+                um.title_idea,
+                um.filed_idea,
+                um.science_lev,
+                um.txt_value,
+                um.allocate_time,
+                um.title_charm,
+                um.eg_leval,
+                um.intro_real,
+                um.is_approved,
+                u.nick_name as username,
+                m.NAME as manuscriptName,
+                m.code as manuscriptCode
+        FROM
+                t_user_manuscript um
+                        INNER JOIN acl_user u ON um.user_id = u.id
+                        INNER JOIN t_manuscript m ON um.manuscript_id = m.id
+        where um.is_deleted=0 and um.manuscript_id=#{param2,jdbcType=VARCHAR} and um.user_id=#{param1,jdbcType=VARCHAR}
         order by um.allocate_time desc
     </select>
 </mapper>

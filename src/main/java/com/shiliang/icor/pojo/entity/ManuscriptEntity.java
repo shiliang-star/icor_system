@@ -54,7 +54,7 @@ public class ManuscriptEntity extends BaseEntity implements Serializable {
 
     @ApiModelProperty(value = "审稿进度")
     @TableField(fill = FieldFill.INSERT)
-    private Integer examProgress;
+    private Double examProgress;
 
     @ApiModelProperty(value = "稿件状态")
     private Integer status;

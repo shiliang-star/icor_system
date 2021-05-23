@@ -3,10 +3,12 @@ package com.shiliang.icor.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.shiliang.icor.pojo.CommonResult;
+import com.shiliang.icor.pojo.entity.UserEntity;
 import com.shiliang.icor.pojo.enums.OperTypeConst;
 import com.shiliang.icor.pojo.vo.ManuscriptSearchForm;
 import com.shiliang.icor.pojo.vo.ManuscriptVO;
 import com.shiliang.icor.pojo.vo.UserManuscriptVO;
+import com.shiliang.icor.security.TokenManager;
 import com.shiliang.icor.service.UserManuscriptService;
 import com.shiliang.icor.utils.OperLog;
 import io.swagger.annotations.ApiOperation;
@@ -35,6 +37,9 @@ public class UserManuscriptController {
     @Autowired
     private UserManuscriptService userManuscriptService;
 
+    @Autowired
+    private TokenManager tokenManager;
+
 
     @ApiOperation("分页条件查询稿件信息")
     @PostMapping("list/{currentPage}/{pageSize}")
@@ -56,6 +61,15 @@ public class UserManuscriptController {
     public CommonResult<List<UserManuscriptVO>> getByManuscriptId(@PathVariable("manuscriptId") String manuscriptId) {
         List<UserManuscriptVO> userManuscriptVOList = userManuscriptService.getByManuscriptId(manuscriptId);
         return CommonResult.success(userManuscriptVOList);
+    }
+
+    @ApiOperation("根据稿件主键和审稿人查询稿件审批情况")
+    @OperLog(operModule = "用户-稿件模块", operType = OperTypeConst.GET, operDesc = "根据稿件主键和审稿人查询稿件审批情况")
+    @GetMapping("/getByManuscriptIdAndReviewer")
+    public CommonResult<UserManuscriptVO> getByManuscriptIdAndReviewer(HttpServletRequest request,@RequestParam("manuscriptId") String manuscriptId) {
+        UserEntity userEntity = tokenManager.getUserInfoByToken(request);
+        UserManuscriptVO userManuscriptVO = userManuscriptService.getByManuscriptIdAndReviewer(userEntity.getId(),manuscriptId);
+        return CommonResult.success(userManuscriptVO);
     }
 
     @ApiOperation("批量删除用户-稿件信息")

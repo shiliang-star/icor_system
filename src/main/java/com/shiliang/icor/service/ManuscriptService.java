@@ -37,7 +37,7 @@ public interface ManuscriptService extends IService<ManuscriptEntity> {
      * @param manuscriptEntity
      * @return
      */
-    Boolean saveManuscript(ManuscriptEntity manuscriptEntity,String attachmentId);
+    ManuscriptEntity saveManuscript(ManuscriptVO manuscriptVO,String attachmentId);
 
 
     /**
@@ -45,7 +45,7 @@ public interface ManuscriptService extends IService<ManuscriptEntity> {
      * @param manuscriptEntity
      * @return
      */
-    Boolean updateManuscript(ManuscriptEntity manuscriptEntity);
+    Boolean updateManuscript(ManuscriptVO manuscriptVO);
 
     /**
      * 提交稿件
@@ -59,7 +59,7 @@ public interface ManuscriptService extends IService<ManuscriptEntity> {
      * @param manuscriptEntity
      * @return
      */
-    Boolean submitManuscript(ManuscriptEntity manuscriptEntity,String attachmentId);
+    ManuscriptEntity submitManuscript(ManuscriptVO manuscriptVO,String attachmentId);
 
     /**
      * 回收稿件
@@ -95,5 +95,12 @@ public interface ManuscriptService extends IService<ManuscriptEntity> {
      * @return
      */
     boolean batchRemoveByIds(String[] arrayIds);
+
+    /**
+     * 删除稿件信息
+     * @param id
+     * @return
+     */
+    boolean deleteManuscriptById(String id);
 
 }

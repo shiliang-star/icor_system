@@ -41,6 +41,9 @@ public class ConferenceEntity extends BaseEntity implements Serializable {
     @ApiModelProperty(value = "议题")
     private String topics;
 
+    @ApiModelProperty(value = "会议分类")
+    private String conferenceClass;
+
     @ApiModelProperty(value = "主持者")
     private String moderator;
 

@@ -26,4 +26,7 @@ public interface UserManuscriptService extends IService<UserManuscriptEntity> {
     List<UserManuscriptVO> getByManuscriptId(String manuscriptId);
 
     void exportExcel(HttpServletResponse response);
+
+    UserManuscriptVO getByManuscriptIdAndReviewer(String userId, String manuscriptId);
+
 }
