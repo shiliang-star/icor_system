@@ -79,6 +79,13 @@ public class UserController {
         return Result.ok();
     }
 
+    @ApiOperation(value = "获取管理用户")
+    @OperLog(operModule = "获取管理用户", operType = OperTypeConst.GET, operDesc = "获取管理用户")
+    @GetMapping("get/{id}")
+    public Result get(@PathVariable() String id) {
+        return Result.ok().data("item", userService.getById(id));
+    }
+
     @ApiOperation(value = "删除管理用户")
     @OperLog(operModule = "用户模块", operType = OperTypeConst.DELETE, operDesc = "删除管理用户")
     @DeleteMapping("remove/{id}")
