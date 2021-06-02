@@ -29,10 +29,10 @@ spring:
 aliyun:
   oss:
     file:
-      endpoint: oss-cn-beijing.aliyuncs.com
-      keyid: LTAI4GFJn45mPDBrGuWUyhL7
-      keysecret: o4kX7OWqodDJI9jYWSp3zubt4HkoJB
+      endpoint: ##########
+      keyid: #######
+      keysecret: #######
       #bucket可以在控制台创建，也可以使用java代码创建
-      bucketname: shiliang-edu
+      bucketname: #######
 
 
